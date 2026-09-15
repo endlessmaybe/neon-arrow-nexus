@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07091a" />
+    <meta name="description" content="霓虹箭域：一款带折光门、连击与量子超载机制的炫彩箭头解谜游戏。" />
+    <title>霓虹箭域 · Neon Arrow Nexus</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="aurora aurora-a" aria-hidden="true"></div>
+    <div class="aurora aurora-b" aria-hidden="true"></div>
+    <div class="noise" aria-hidden="true"></div>
+
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" role="img">
+              <path d="M12 32h34M35 20l12 12-12 12" />
+              <circle cx="18" cy="32" r="7" />
+            </svg>
+          </div>
+          <div>
+            <p class="eyebrow">AIGC ARCADE EXPERIMENT</p>
+            <h1>霓虹箭域 <span>NEON ARROW NEXUS</span></h1>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button class="icon-button" id="soundButton" type="button" aria-label="切换音效" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path class="sound-wave" d="M16 8c1.3 1.2 1.3 6.8 0 8M19 5c3.2 3.3 3.2 10.7 0 14"/></svg>
+          </button>
+          <button class="ghost-button" id="restartButton" type="button">重新校准</button>
+        </div>
+      </header>
+
+      <section class="hud" aria-label="游戏状态">
+        <article class="hud-card hud-level">
+          <span>关卡</span>
+          <strong id="levelValue">01 / 03</strong>
+          <small id="levelName">星潮启航</small>
+        </article>
+        <article class="hud-card">
+          <span>积分</span>
+          <strong id="scoreValue">000000</strong>
+          <small>清除箭路获得积分</small>
+        </article>
+        <article class="hud-card hot">
+          <span>连击</span>
+          <strong id="comboValue">×0</strong>
+          <small id="comboLabel">保持节奏</small>
+        </article>
+        <article class="hud-card">
+          <span>剩余时间</span>
+          <strong id="timeValue">82.0</strong>
+          <small>秒</small>
+        </article>
+        <article class="hud-card">
+          <span>稳定度</span>
+          <strong id="livesValue" aria-label="剩余四点稳定度">◆ ◆ ◆ ◆</strong>
+          <small>碰撞会损失 1 点</small>
+        </article>
+      </section>
+
+      <section class="game-layout">
+        <div class="board-card" id="boardCard">
+          <div class="board-chrome">
+            <div class="status-chip"><i></i><span id="statusText">等待同步</span></div>
+            <div class="board-tag">GRID 09 × 12</div>
+          </div>
+          <div class="canvas-wrap" id="canvasWrap">
+            <canvas id="gameCanvas" tabindex="0" aria-label="箭头解谜棋盘。点击箭路使其沿箭头方向飞出棋盘，路径被其他箭阻挡时会碰撞。"></canvas>
+            <div class="scanline" aria-hidden="true"></div>
+            <div class="board-vignette" aria-hidden="true"></div>
+            <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+            <div class="overlay show" id="startOverlay">
+              <div class="overlay-panel">
+                <p class="eyebrow cyan">NEXUS ONLINE</p>
+                <h2>让所有箭路逃离奇点</h2>
+                <p>箭头前方无阻挡即可飞出；撞上其他箭会损失稳定度。连续正确操作可积累量子能量。</p>
+                <div class="rule-row">
+                  <span><b>01</b> 判断路径</span>
+                  <span><b>02</b> 连续消除</span>
+                  <span><b>03</b> 引爆超载</span>
+                </div>
+                <button class="primary-button" id="startButton" type="button">进入箭域</button>
+                <small>支持鼠标 / 触屏 · Enter 开始 · R 重开 · H 提示</small>
+              </div>
+            </div>
+
+            <div class="overlay" id="resultOverlay">
+              <div class="overlay-panel result-panel">
+                <p class="eyebrow cyan" id="resultEyebrow">SECTOR CLEARED</p>
+                <h2 id="resultTitle">箭域已清空</h2>
+                <p id="resultText">折光路径已经稳定。</p>
+                <div class="result-stats">
+                  <div><span>本关得分</span><strong id="resultScore">0</strong></div>
+                  <div><span>最高连击</span><strong id="resultCombo">×0</strong></div>
+                  <div><span>时间奖励</span><strong id="resultTime">+0</strong></div>
+                </div>
+                <button class="primary-button" id="nextButton" type="button">进入下一扇区</button>
+              </div>
+            </div>
+          </div>
+          <div class="board-footer">
+            <span><i class="legend-dot cyan-dot"></i>普通箭路</span>
+            <span><i class="legend-diamond"></i>棱镜箭：额外充能</span>
+            <span><i class="legend-gate"></i>折光门：旋转 90°</span>
+          </div>
+        </div>
+
+        <aside class="control-rail">
+          <section class="panel ability-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">QUANTUM CORE</p>
+                <h2>量子超载</h2>
+              </div>
+              <span id="chargeNumber">0%</span>
+            </div>
+            <div class="charge-track" aria-hidden="true"><div id="chargeFill"></div></div>
+            <p>连续消除积累能量。充满后激活，下一次点击可让一条被阻挡的箭路相位穿透。</p>
+            <button class="ability-button" id="overdriveButton" type="button" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 10-13h-7V2Z"/></svg>
+              <span><b>启动超载</b><small id="overdriveState">能量未充满</small></span>
+            </button>
+          </section>
+
+          <section class="panel mission-panel">
+            <div class="panel-heading compact">
+              <div>
+                <p class="eyebrow">SECTOR BRIEF</p>
+                <h2>当前扇区</h2>
+              </div>
+              <span class="sector-index" id="sectorIndex">01</span>
+            </div>
+            <p id="levelNote">熟悉箭路、连击与量子超载。</p>
+            <div class="mission-row"><span>剩余箭路</span><strong id="remainingValue">20</strong></div>
+            <div class="mission-row"><span>已清除</span><strong id="clearedValue">0</strong></div>
+            <div class="mission-row"><span>最高连击</span><strong id="bestComboValue">×0</strong></div>
+          </section>
+
+          <section class="panel assist-panel">
+            <p class="eyebrow">TACTICAL ASSIST</p>
+            <h2>战术辅助</h2>
+            <p>迷路时可扫描一条当前可安全离场的箭路，每次扣除 120 分。</p>
+            <button class="secondary-button" id="hintButton" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 22h4M8.6 14.7A7 7 0 1 1 15.4 14.7c-.9.7-1.4 1.5-1.4 2.3h-4c0-.8-.5-1.6-1.4-2.3Z"/></svg>
+              扫描安全箭路
+            </button>
+          </section>
+
+          <section class="panel mechanic-panel">
+            <p class="eyebrow">NEW MECHANICS</p>
+            <h2>本作创新</h2>
+            <ul>
+              <li><span>折光门</span><small>飞行射线进入后转向</small></li>
+              <li><span>棱镜充能</span><small>特殊箭路带来额外能量</small></li>
+              <li><span>量子超载</span><small>主动打破一次死锁</small></li>
+              <li><span>动态连击</span><small>高风险操作换取高分</small></li>
+            </ul>
+          </section>
+        </aside>
+      </section>
+
+      <footer class="site-footer">
+        <span>NEON ARROW NEXUS / SOFTWARE ENGINEERING AIGC COURSEWORK</span>
+        <span>Canvas 2D · Seeded Solvable Generator · Responsive UI</span>
+      </footer>
+    </main>
+    <script type="module" src="./src/game.js"></script>
+  </body>
+</html>
