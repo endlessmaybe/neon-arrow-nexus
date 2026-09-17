@@ -1,5 +1,16 @@
-node_modules/
 .DS_Store
 Thumbs.db
 *.log
-output/playwright/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.spec
+.venv/
+venv/
+build/
+*.egg-info/
+.coverage
+htmlcov/
+
+# 桌面方便启动用的重复 EXE 不进入仓库；正式二进制只保留 dist/ 这一份。
+霓虹箭域.exe

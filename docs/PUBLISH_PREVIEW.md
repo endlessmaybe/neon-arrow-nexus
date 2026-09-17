@@ -1,0 +1,133 @@
+# GitHub / 博客园发布前预览
+
+> 当前状态：**只准备，不上传、不发布。** 用户明确确认后，才执行远程仓库创建/推送、Release 上传和博客园发布。
+
+## 1. GitHub 预案
+
+拟使用账号：`endlessmaybe`
+
+拟定仓库名：
+
+```text
+neon-arrow-nexus
+```
+
+拟定仓库简介：
+
+```text
+Python/Pygame 实现的“一箭又一箭”课程项目：基础单格模式 + 进阶随机长箭模式，包含随机可解关卡、AI 求解、撤销、存档、动画音效与 Windows EXE。
+```
+
+拟定默认分支：`main`
+
+拟定可见性：`Public`
+
+### 仓库首页重点
+
+- 首图使用 `docs/screenshots/py-00-setup.png`，先展示“基础 / 进阶 + 三档难度”的完整启动流程；
+- 第二张展示 `docs/screenshots/py-01-basic.png`，证明基础模式不是文案换皮；
+- 后续展示进阶中等、终极困难、通关页和箭头有序离场；
+- README 先写作业基础规则，再写进阶创新，避免老师先看到机关却找不到题目主体；
+- 源码入口保持 `main.py`，最终仓库不放旧 HTML / CSS / JavaScript 原型。
+
+### 拟定 Release
+
+Tag：
+
+```text
+v1.0.0-coursework
+```
+
+Release 标题：
+
+```text
+Neon Arrow Nexus · 软件工程第二次个人作业
+```
+
+附件：
+
+```text
+dist/NeonArrowNexus-Python.exe
+```
+
+Release 说明草稿：
+
+```text
+课程提交版。正式实现为 Python 3 + Pygame。
+
+- 基础模式：单格四方向箭头，按作业原规则做直线路径判断；
+- 进阶模式：2–4 格随机长箭，加入折光、反相、双跃迁和阶段相位锁；
+- 每次启动先选择玩法模式和简单 / 中等 / 终极困难；
+- 支持撤销、自动存档、AI 自动求解、计分/计时/星级、量子超载、低动态和音效；
+- Windows 单文件 EXE，可直接双击运行。
+```
+
+## 2. 博客园预案
+
+拟发布账号主页：
+
+```text
+https://www.cnblogs.com/Heimdallr
+```
+
+拟定标题：
+
+```text
+2026 秋软件工程个人作业（第二次）——霓虹箭域 Neon Arrow Nexus
+```
+
+正式 Markdown 源稿：
+
+```text
+docs/BLOG_DRAFT.md
+```
+
+正文开头已经按老师指定的 Markdown 表格格式整理为“课程 / 作业要求 / 作业目标 / 学号”四行；Git 仓库地址紧跟表格单独列出。学号和最终 GitHub URL 在正式发布前再填，不在当前预览阶段编造。
+
+### 拟上传图片顺序
+
+1. `py-00-setup.png`：每次启动的模式与难度选择；
+2. `py-01-basic.png`：基础模式单格箭头；
+3. `py-02-level2.png`：进阶中等；
+4. `py-03-level3.png`：进阶终极困难；
+5. `py-04-complete.png`：结果页；
+6. `py-06-arrow-exit.png`：箭头有序离场中间帧，可放在动画说明段落。
+
+发布到博客园时，相对图片路径需要替换为博客园上传图片后返回的真实地址；当前草稿先保留仓库相对路径，方便 GitHub 直接预览。
+
+## 3. 发布前还要核对的点
+
+- [x] 最终全量 pytest 通过：`44 passed in 65.30s`；
+- [x] 源码 `--headless-check` 通过；
+- [x] 重新构建 EXE，打包后的 EXE 自检通过；
+- [x] 启动页截图和基础模式截图为本轮新版本；
+- [x] README / BLOG / DESIGN / TEST_REPORT 已统一到“基础单格 + 进阶长箭 + 启动选难度”的口径；
+- [ ] Git 工作区不含临时输出文件、Token、Cookie、个人隐私；
+- [ ] 用户本人过目并明确同意后，再执行任何远程上传或发布。
+
+## 4. 当前远程状态
+
+- Git 仓库当前没有配置 remote；
+- 本机 `gh auth status` 当前显示未登录 GitHub；
+- 本地发布候选已经整理成独立 Git 提交 `feat: finalize Python arrow game and publish preview`，方便本人过目后直接基于这个版本创建远程仓库；
+- 因用户要求“先过目、同意后再上传”，本轮不会为解决登录问题而主动触发 GitHub 登录，也不会创建远程仓库；
+- 博客园同样只准备 Markdown 和图片清单，不发布草稿、不改公开文章。
+
+本人确认后才执行的 GitHub 步骤预案：
+
+```text
+gh auth login
+gh repo create neon-arrow-nexus --public --source . --remote origin --push
+gh release create v1.0.0-coursework dist/NeonArrowNexus-Python.exe
+```
+
+以上只是发布步骤记录，**当前没有执行**。
+
+本轮最终 EXE：
+
+```text
+dist/NeonArrowNexus-Python.exe
+28,251,082 bytes
+SHA-256 75DA9C29F7CCC53947E114B24619ADA9557D10F2472060FE5B12641D5EF4687A
+```
+
