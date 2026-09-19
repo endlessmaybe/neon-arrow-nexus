@@ -10,7 +10,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import pygame
 
 import neon_arrow.app as app_module
-from neon_arrow.app import NeonArrowApp, _exit_opacity
+from neon_arrow.app import CONTROL_HELP, NeonArrowApp, _exit_opacity
 from neon_arrow.engine import TOTAL_LEVELS, is_solution_valid, safe_arrow_ids
 
 
@@ -50,6 +50,34 @@ def test_auto_save_and_restore_progress() -> None:
     assert restored.score == 1234
     assert restored.energy == 56
     assert restored.level_index == app.level_index
+    pygame.quit()
+
+
+def test_saved_progress_still_reopens_on_setup_and_requires_matching_choice() -> None:
+    _use_temp_save()
+    app = NeonArrowApp((1100, 700), load_save=True)
+    app.select_setup_mode("basic")
+    app.select_setup_difficulty(2)
+    app.start_selected_game()
+    app.score = 2468
+    app.save_progress()
+
+    restored = NeonArrowApp((1100, 700), load_save=True)
+    assert restored.state == "setup"
+    assert restored.pending_mode is None
+    assert restored.pending_difficulty is None
+    assert restored.resume_available is True
+    assert restored.resume_mode == "basic"
+    assert restored.resume_level_index == 2
+    assert restored.score == 2468
+
+    restored.start_selected_game()
+    assert restored.state == "setup"
+    restored.select_setup_mode("basic")
+    restored.select_setup_difficulty(2)
+    restored.resume_selected_game()
+    assert restored.state == "playing"
+    assert restored.score == 2468
     pygame.quit()
 
 
@@ -110,6 +138,117 @@ def test_advanced_mode_still_uses_long_arrow_mechanics() -> None:
     assert any(len(arrow["cells"]) > 1 for arrow in app.arrows)
     assert app.level["config"]["portals"]
     assert app.level["config"]["phase_locks"]
+    pygame.quit()
+
+
+def test_mid_game_difficulty_switch_keeps_mode_and_starts_fresh_level() -> None:
+    _use_temp_save()
+    app = NeonArrowApp((1100, 700), load_save=False)
+    app.select_setup_mode("basic")
+    app.select_setup_difficulty(0)
+    app.start_selected_game()
+    original_seed = app.session_seed
+
+    app.score = 999
+    app.energy = 88
+    app.combo = 7
+    app.open_difficulty_menu()
+    assert app.difficulty_menu_open is True
+    app.switch_difficulty(2)
+
+    assert app.difficulty_menu_open is False
+    assert app.state == "playing"
+    assert app.game_mode == "basic"
+    assert app.level_index == 2
+    assert app.training_mode is True
+    assert app.session_seed != original_seed
+    assert app.score == 0
+    assert app.energy == 0
+    assert app.combo == 0
+    assert all(len(arrow["cells"]) == 1 for arrow in app.arrows)
+    assert app.level["config"]["difficulty"] == "终极困难"
+    pygame.quit()
+
+
+def test_d_key_opens_difficulty_menu_and_number_key_switches() -> None:
+    _use_temp_save()
+    app = NeonArrowApp((1100, 700), load_save=False)
+    app.select_setup_mode("advanced")
+    app.select_setup_difficulty(0)
+    app.start_selected_game()
+
+    app.process_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_d))
+    assert app.difficulty_menu_open is True
+    app.process_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_2))
+
+    assert app.difficulty_menu_open is False
+    assert app.level_index == 1
+    assert app.game_mode == "advanced"
+    assert app.state == "playing"
+    pygame.quit()
+
+
+def test_difficulty_menu_pauses_timer_and_exposes_sidebar_button() -> None:
+    _use_temp_save()
+    app = NeonArrowApp((1100, 700), load_save=False)
+    app.select_setup_mode("advanced")
+    app.select_setup_difficulty(1)
+    app.start_selected_game()
+    before = app.time_left
+
+    app.open_difficulty_menu()
+    app.update(5.0)
+    assert app.time_left == before
+
+    app.close_difficulty_menu()
+    app.render()
+    assert "open_difficulty" in {action for _rect, action in app.buttons}
+    pygame.quit()
+
+
+def test_sidebar_control_icons_have_complete_purpose_help() -> None:
+    expected = {
+        "open_difficulty",
+        "overdrive",
+        "undo",
+        "save",
+        "ai_solve",
+        "restart",
+        "toggle_motion",
+        "toggle_sound",
+    }
+    assert set(CONTROL_HELP) == expected
+    for title, shortcut, description in CONTROL_HELP.values():
+        assert title
+        assert shortcut
+        assert len(description) >= 12
+
+
+def test_hovering_sidebar_control_exposes_contextual_help(monkeypatch) -> None:
+    _use_temp_save()
+    app = NeonArrowApp((1100, 700), load_save=False)
+    app.state = "playing"
+    app.render()
+    rect = next(rect for rect, action in app.buttons if action == "restart")
+    monkeypatch.setattr(pygame.mouse, "get_pos", lambda: rect.center)
+    app.render()
+    assert app.hovered_action == "restart"
+    pygame.quit()
+
+
+def test_static_render_assets_are_reused_between_frames() -> None:
+    _use_temp_save()
+    app = NeonArrowApp((1100, 700), load_save=False)
+    app.state = "playing"
+    app.render()
+    background = app._background_cache
+    grid_layers = tuple(app._grid_cache.values())
+    arrow_layer = app._effect_layers["arrow_glow"]
+
+    app.render()
+    assert app._background_cache is background
+    assert tuple(app._grid_cache.values()) == grid_layers
+    assert app._effect_layers["arrow_glow"] is arrow_layer
     pygame.quit()
 
 

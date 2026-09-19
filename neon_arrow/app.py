@@ -55,6 +55,17 @@ HAIRLINE = (145, 178, 220)
 SAVE_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "NeonArrowNexus"
 SAVE_FILE = SAVE_DIR / "savegame.json"
 
+CONTROL_HELP: dict[str, tuple[str, str, str]] = {
+    "open_difficulty": ("切换难度", "D", "保持当前玩法模式，切换难度后生成新地图并重置当前单关进度。"),
+    "overdrive": ("量子超载", "O", "能量达到 100% 后激活；下一次受阻箭可相位穿透一次且不扣稳定度。"),
+    "undo": ("撤销", "U", "撤销上一步手动点击，恢复箭路、积分、稳定度、时间与能量状态。"),
+    "save": ("保存", "S", "立即把当前进度和音效、低动态偏好写入本地存档。"),
+    "ai_solve": ("AI 自动求解", "A", "计算并演示当前关可行消除顺序；启动扣 300 分，并影响本关星级评价。"),
+    "restart": ("重开本关", "R", "按同一 RUN 重置本关，地图保持不变，方便重新判断路径。"),
+    "toggle_motion": ("低动态模式", "V", "冻结持续装饰运动并减少粒子效果，同时降低每帧渲染开销。"),
+    "toggle_sound": ("音效", "M", "开关程序内音效；设置会随自动存档一起保存。"),
+}
+
 
 @dataclass
 class Particle:
@@ -187,7 +198,16 @@ class NeonArrowApp:
         self.particles: list[Particle] = []
         self.exiting_arrows: list[ExitingArrow] = []
         self.buttons: list[tuple[pygame.Rect, str]] = []
+        self.hovered_action: str | None = None
         self.hovered_arrow_id: str | None = None
+        self._geometry_cache_key: tuple[int, int] | None = None
+        self._geometry_cache: tuple[pygame.Rect, int, tuple[int, int]] | None = None
+        self._background_cache_key: tuple[int, int] | None = None
+        self._background_cache: pygame.Surface | None = None
+        self._grid_cache: dict[tuple[int, int, int], pygame.Surface] = {}
+        self._effect_layers: dict[str, pygame.Surface] = {}
+        self._glow_cache: dict[tuple[int, tuple[int, int, int], int], pygame.Surface] = {}
+        self._text_cache: dict[tuple[str, int, bool, tuple[int, int, int]], pygame.Surface] = {}
         self.banner_text = ""
         self.banner_until = 0.0
         self.reduced_motion = False
@@ -204,6 +224,7 @@ class NeonArrowApp:
         self.game_mode = "advanced"
         self.pending_mode: str | None = None
         self.pending_difficulty: int | None = None
+        self.difficulty_menu_open = False
         self.resume_available = False
         self.resume_state = "ready"
         self.resume_mode = "advanced"
@@ -425,6 +446,39 @@ class NeonArrowApp:
         if 0 <= index < TOTAL_LEVELS:
             self.pending_difficulty = index
 
+    def open_difficulty_menu(self) -> None:
+        if self.state == "setup":
+            return
+        self.difficulty_menu_open = True
+
+    def close_difficulty_menu(self) -> None:
+        self.difficulty_menu_open = False
+
+    def switch_difficulty(self, index: int) -> None:
+        if not 0 <= index < TOTAL_LEVELS:
+            return
+        if index == self.level_index:
+            self.difficulty_menu_open = False
+            self.flash_banner("当前已经是这个难度")
+            return
+
+        # Mid-game difficulty changes keep the selected ruleset (basic or
+        # advanced), but deliberately start a fresh single-level challenge so
+        # score/lives/time from the previous difficulty cannot leak across.
+        self.session_seed = create_session_seed()
+        self.training_mode = True
+        self.score = 0
+        self.combo = 0
+        self.energy = 0
+        self.overdrive = False
+        self.load_level(index, keep_state=True)
+        self.state = "playing"
+        self.resume_available = False
+        self.difficulty_menu_open = False
+        mode_name = "基础模式" if self.game_mode == "basic" else "进阶模式"
+        self.flash_banner(f"已切换：{mode_name} · {self.level['config']['difficulty']} · 新随机地图")
+        self.save_progress()
+
     def start_selected_game(self) -> None:
         if self.pending_mode is None or self.pending_difficulty is None:
             self.flash_banner("请先选择玩法模式和难度")
@@ -456,6 +510,7 @@ class NeonArrowApp:
     def return_to_setup(self) -> None:
         self.pending_mode = None
         self.pending_difficulty = None
+        self.difficulty_menu_open = False
         self.state = "setup"
 
     def stars_earned(self) -> int:
@@ -501,6 +556,55 @@ class NeonArrowApp:
             self.fonts[key] = pygame.font.Font(path, rendered_size)
             self.fonts[key].set_bold(bold)
         return self.fonts[key]
+
+    def text_surface(
+        self,
+        text: str,
+        size: int,
+        color: tuple[int, int, int] = TEXT,
+        bold: bool = False,
+    ) -> pygame.Surface:
+        font = self.font(size, bold)
+        key = (text, id(font), bold, color)
+        cached = self._text_cache.get(key)
+        if cached is not None:
+            return cached
+        surface = font.render(text, True, color)
+        if len(self._text_cache) >= 1024:
+            self._text_cache.clear()
+        self._text_cache[key] = surface
+        return surface
+
+    def effect_layer(self, name: str, size: tuple[int, int]) -> pygame.Surface:
+        layer = self._effect_layers.get(name)
+        if layer is None or layer.get_size() != size:
+            layer = pygame.Surface(size, pygame.SRCALPHA)
+            self._effect_layers[name] = layer
+        else:
+            layer.set_alpha(None)
+            layer.fill((0, 0, 0, 0))
+        return layer
+
+    def static_background(self, size: tuple[int, int]) -> pygame.Surface:
+        if self._background_cache_key == size and self._background_cache is not None:
+            return self._background_cache
+        width, height = size
+        surface = pygame.Surface(size).convert()
+        for y in range(0, height, 2):
+            ratio = y / max(1, height - 1)
+            pygame.draw.rect(surface, _mix(BG_TOP, BG_BOTTOM, ratio), (0, y, width, 2))
+        haze = pygame.Surface(size, pygame.SRCALPHA)
+        glows = [
+            ((int(width * 0.80), int(height * 0.16)), CYAN, int(min(width, height) * 0.34), 15),
+            ((int(width * 0.42), int(height * 0.90)), PURPLE, int(min(width, height) * 0.42), 12),
+        ]
+        for center, color, radius, strength in glows:
+            for scale, alpha in ((1.0, strength // 3), (0.58, strength)):
+                pygame.draw.circle(haze, (*color, alpha), center, max(1, int(radius * scale)))
+        surface.blit(haze, (0, 0))
+        self._background_cache_key = size
+        self._background_cache = surface
+        return surface
 
     def new_run(self, auto_start: bool = False) -> None:
         self.session_seed = create_session_seed()
@@ -579,6 +683,9 @@ class NeonArrowApp:
 
     def board_geometry(self) -> tuple[pygame.Rect, int, tuple[int, int]]:
         width, height = self.screen.get_size()
+        cache_key = (width, height)
+        if self._geometry_cache_key == cache_key and self._geometry_cache is not None:
+            return self._geometry_cache
         sidebar_width = max(self.px(286), min(self.px(330), int(width * 0.25)))
         board_panel = pygame.Rect(
             sidebar_width + self.px(50),
@@ -600,7 +707,9 @@ class NeonArrowApp:
             board_panel.centerx - grid_width // 2,
             board_panel.centery - grid_height // 2 + self.px(6),
         )
-        return board_panel, cell, origin
+        self._geometry_cache_key = cache_key
+        self._geometry_cache = (board_panel, cell, origin)
+        return self._geometry_cache
 
     def cell_center(self, x: int, y: int) -> tuple[int, int]:
         _, cell, origin = self.board_geometry()
@@ -764,7 +873,7 @@ class NeonArrowApp:
             )
 
     def update(self, dt: float) -> None:
-        if self.state == "playing":
+        if self.state == "playing" and not self.difficulty_menu_open:
             self.time_left -= dt
             if self.time_left <= 0:
                 self.time_left = 0
@@ -772,7 +881,7 @@ class NeonArrowApp:
                 self.flash_banner("时间耗尽")
                 self.save_progress()
 
-        if self.state == "playing" and self.ai_queue and time.perf_counter() >= self.ai_next_at:
+        if self.state == "playing" and not self.difficulty_menu_open and self.ai_queue and time.perf_counter() >= self.ai_next_at:
             arrow_id = self.ai_queue.pop(0)
             arrow = next((item for item in self.arrows if item["id"] == arrow_id), None)
             if arrow is not None:
@@ -830,6 +939,12 @@ class NeonArrowApp:
             self.save_progress()
         elif action == "toggle_motion":
             self.toggle_reduced_motion()
+        elif action == "open_difficulty":
+            self.open_difficulty_menu()
+        elif action == "close_difficulty":
+            self.close_difficulty_menu()
+        elif action.startswith("switch_difficulty_"):
+            self.switch_difficulty(int(action.rsplit("_", 1)[1]))
         elif action == "next":
             self.next_level()
         elif action == "new_run":
@@ -848,6 +963,12 @@ class NeonArrowApp:
             height = max(MIN_WINDOW_SIZE[1], event.h)
             self.screen = pygame.display.set_mode((width, height), pygame.RESIZABLE | pygame.DOUBLEBUF)
         elif event.type == pygame.KEYDOWN:
+            if self.difficulty_menu_open:
+                if event.key in (pygame.K_ESCAPE, pygame.K_d):
+                    self.close_difficulty_menu()
+                elif event.key in (pygame.K_1, pygame.K_2, pygame.K_3):
+                    self.switch_difficulty(event.key - pygame.K_1)
+                return
             if event.key == pygame.K_ESCAPE:
                 self.save_progress()
                 self.running = False
@@ -877,9 +998,14 @@ class NeonArrowApp:
                 self.save_progress()
             elif event.key == pygame.K_v:
                 self.toggle_reduced_motion()
+            elif event.key == pygame.K_d and self.state != "setup":
+                self.open_difficulty_menu()
             elif event.key in (pygame.K_1, pygame.K_2, pygame.K_3) and self.state == "ready":
                 self.select_level(event.key - pygame.K_1)
         elif event.type == pygame.MOUSEMOTION:
+            if self.difficulty_menu_open:
+                self.hovered_arrow_id = None
+                return
             arrow = self.arrow_at_point(event.pos)
             self.hovered_arrow_id = arrow["id"] if arrow else None
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -887,26 +1013,15 @@ class NeonArrowApp:
                 if rect.collidepoint(event.pos):
                     self.handle_action(action)
                     return
+            if self.difficulty_menu_open:
+                return
             arrow = self.arrow_at_point(event.pos)
             if arrow:
                 self.handle_arrow_click(arrow)
 
     def draw_background(self, target: pygame.Surface, now: float) -> None:
         width, height = target.get_size()
-        for y in range(0, height, 2):
-            ratio = y / max(1, height - 1)
-            color = _mix(BG_TOP, BG_BOTTOM, ratio)
-            pygame.draw.rect(target, color, (0, y, width, 2))
-
-        haze = pygame.Surface((width, height), pygame.SRCALPHA)
-        glows = [
-            ((int(width * 0.80), int(height * 0.16)), CYAN, int(min(width, height) * 0.34), 15),
-            ((int(width * 0.42), int(height * 0.90)), PURPLE, int(min(width, height) * 0.42), 12),
-        ]
-        for center, color, radius, strength in glows:
-            for scale, alpha in ((1.0, strength // 3), (0.58, strength)):
-                pygame.draw.circle(haze, (*color, alpha), center, max(1, int(radius * scale)))
-        target.blit(haze, (0, 0))
+        target.blit(self.static_background((width, height)), (0, 0))
 
         for sx, sy, radius, speed in self.stars:
             x = int(sx * width)
@@ -925,11 +1040,18 @@ class NeonArrowApp:
     def draw_glow(self, target: pygame.Surface, center: tuple[int, int], radius: int, color: tuple[int, int, int], alpha: int = 32) -> None:
         if radius <= 0 or alpha <= 0:
             return
-        size = radius * 2 + 8
-        layer = pygame.Surface((size, size), pygame.SRCALPHA)
-        c = (size // 2, size // 2)
-        for scale, weight in ((1.0, 0.18), (0.72, 0.30), (0.48, 0.52), (0.26, 1.0)):
-            pygame.draw.circle(layer, (*color, max(1, int(alpha * weight))), c, max(1, int(radius * scale)))
+        cache_key = (radius, color, alpha)
+        layer = self._glow_cache.get(cache_key)
+        if layer is None:
+            size = radius * 2 + 8
+            layer = pygame.Surface((size, size), pygame.SRCALPHA)
+            c = (size // 2, size // 2)
+            for scale, weight in ((1.0, 0.18), (0.72, 0.30), (0.48, 0.52), (0.26, 1.0)):
+                pygame.draw.circle(layer, (*color, max(1, int(alpha * weight))), c, max(1, int(radius * scale)))
+            if len(self._glow_cache) >= 128:
+                self._glow_cache.clear()
+            self._glow_cache[cache_key] = layer
+        c = (layer.get_width() // 2, layer.get_height() // 2)
         target.blit(layer, (center[0] - c[0], center[1] - c[1]))
 
     def draw_chip(
@@ -957,7 +1079,7 @@ class NeonArrowApp:
         bold: bool = False,
         anchor: str = "topleft",
     ) -> pygame.Rect:
-        surface = self.font(size, bold).render(text, True, color)
+        surface = self.text_surface(text, size, color, bold)
         rect = surface.get_rect()
         setattr(rect, anchor, pos)
         target.blit(surface, rect)
@@ -991,7 +1113,7 @@ class NeonArrowApp:
 
         y = rect.top
         for line in lines:
-            target.blit(font.render(line, True, color), (rect.left, y))
+            target.blit(self.text_surface(line, size, color), (rect.left, y))
             y += font.get_linesize() + line_gap
             if y > rect.bottom:
                 break
@@ -1107,10 +1229,19 @@ class NeonArrowApp:
 
         button_width = rect.width - 44
         half_width = (button_width - 8) // 2
+        self.draw_text(target, "功能操作 · 悬停图标查看用途", (x, rect.bottom - 209), 8, SUBTLE, False)
+        self.draw_button(
+            target,
+            pygame.Rect(x, rect.bottom - 190, button_width, 32),
+            "切换难度",
+            "open_difficulty",
+            GOLD,
+            enabled=self.state != "setup",
+        )
         self.draw_button(
             target,
             pygame.Rect(x, rect.bottom - 152, button_width, 32),
-            "激活量子超载   O" if self.energy >= 100 else f"量子超载 · {self.energy}%",
+            "激活量子超载" if self.energy >= 100 else f"量子超载 · {self.energy}%",
             "overdrive",
             CYAN if self.energy >= 100 else (72, 88, 113),
             enabled=self.energy >= 100,
@@ -1118,7 +1249,7 @@ class NeonArrowApp:
         self.draw_button(
             target,
             pygame.Rect(x, rect.bottom - 114, half_width, 32),
-            "撤销   U",
+            "撤销",
             "undo",
             MAGENTA,
             enabled=bool(self.history),
@@ -1126,7 +1257,7 @@ class NeonArrowApp:
         self.draw_button(
             target,
             pygame.Rect(x + half_width + 8, rect.bottom - 114, half_width, 32),
-            "保存   S",
+            "保存",
             "save",
             CYAN,
             enabled=self.persistence_enabled,
@@ -1134,26 +1265,114 @@ class NeonArrowApp:
         self.draw_button(
             target,
             pygame.Rect(x, rect.bottom - 76, button_width, 32),
-            "AI 自动求解   A" if not self.ai_queue else "AI 求解进行中…",
+            "AI 自动求解" if not self.ai_queue else "AI 求解进行中…",
             "ai_solve",
             GREEN,
             enabled=self.state == "playing" and bool(self.arrows) and not self.ai_queue,
         )
         third_width = (button_width - 16) // 3
-        self.draw_button(target, pygame.Rect(x, rect.bottom - 38, third_width, 28), "重开 R", "restart", (73, 89, 118))
+        self.draw_button(target, pygame.Rect(x, rect.bottom - 38, third_width, 28), "重开", "restart", (73, 89, 118))
         self.draw_button(
             target,
             pygame.Rect(x + third_width + 8, rect.bottom - 38, third_width, 28),
-            "低动态 V",
+            "低动态",
             "toggle_motion",
             CYAN if self.reduced_motion else (73, 89, 118),
         )
         self.draw_button(
             target,
             pygame.Rect(x + (third_width + 8) * 2, rect.bottom - 38, third_width, 28),
-            "音效 M",
+            "音效",
             "toggle_sound",
             GOLD if self.sound_enabled else (73, 89, 118),
+        )
+
+    def draw_control_icon(
+        self,
+        target: pygame.Surface,
+        action: str,
+        center: tuple[int, int],
+        color: tuple[int, int, int],
+        enabled: bool = True,
+    ) -> None:
+        x, y = center
+        ink = color if enabled else (92, 106, 130)
+        stroke = 2
+
+        if action == "open_difficulty":
+            for offset, knob in ((-6, -3), (0, 4), (6, -1)):
+                pygame.draw.line(target, ink, (x - 8, y + offset), (x + 8, y + offset), stroke)
+                pygame.draw.circle(target, ink, (x + knob, y + offset), 2)
+        elif action == "overdrive":
+            pygame.draw.polygon(
+                target,
+                ink,
+                [(x + 1, y - 9), (x - 6, y + 1), (x - 1, y + 1), (x - 4, y + 9), (x + 7, y - 3), (x + 2, y - 3)],
+            )
+        elif action == "undo":
+            pygame.draw.arc(target, ink, pygame.Rect(x - 8, y - 8, 16, 16), math.radians(35), math.radians(300), stroke)
+            pygame.draw.polygon(target, ink, [(x - 9, y - 1), (x - 3, y - 6), (x - 2, y + 2)])
+        elif action == "save":
+            body = pygame.Rect(x - 8, y - 8, 16, 16)
+            pygame.draw.rect(target, ink, body, width=stroke, border_radius=2)
+            pygame.draw.line(target, ink, (x - 4, y - 7), (x - 4, y - 1), stroke)
+            pygame.draw.line(target, ink, (x + 4, y - 7), (x + 4, y - 1), stroke)
+            pygame.draw.rect(target, ink, pygame.Rect(x - 4, y + 2, 8, 4), width=1)
+        elif action == "ai_solve":
+            nodes = ((x - 6, y + 4), (x, y - 6), (x + 7, y + 4))
+            pygame.draw.line(target, ink, nodes[0], nodes[1], stroke)
+            pygame.draw.line(target, ink, nodes[1], nodes[2], stroke)
+            pygame.draw.line(target, ink, nodes[0], nodes[2], stroke)
+            for node in nodes:
+                pygame.draw.circle(target, ink, node, 3, width=stroke)
+        elif action == "restart":
+            pygame.draw.arc(target, ink, pygame.Rect(x - 8, y - 8, 16, 16), math.radians(-45), math.radians(255), stroke)
+            pygame.draw.polygon(target, ink, [(x + 8, y - 5), (x + 2, y - 7), (x + 7, y + 1)])
+        elif action == "toggle_motion":
+            pygame.draw.line(target, ink, (x - 8, y - 5), (x + 5, y - 5), stroke)
+            pygame.draw.line(target, ink, (x - 5, y), (x + 8, y), stroke)
+            pygame.draw.line(target, ink, (x - 8, y + 5), (x + 3, y + 5), stroke)
+            if self.reduced_motion:
+                pygame.draw.line(target, ink, (x + 7, y - 8), (x - 7, y + 8), stroke)
+        elif action == "toggle_sound":
+            pygame.draw.polygon(target, ink, [(x - 8, y - 3), (x - 4, y - 3), (x + 1, y - 7), (x + 1, y + 7), (x - 4, y + 3), (x - 8, y + 3)])
+            if self.sound_enabled:
+                pygame.draw.arc(target, ink, pygame.Rect(x - 2, y - 7, 12, 14), math.radians(-55), math.radians(55), stroke)
+                pygame.draw.arc(target, ink, pygame.Rect(x - 2, y - 10, 17, 20), math.radians(-48), math.radians(48), 1)
+            else:
+                pygame.draw.line(target, ink, (x + 4, y - 6), (x + 10, y + 6), stroke)
+                pygame.draw.line(target, ink, (x + 10, y - 6), (x + 4, y + 6), stroke)
+        else:
+            pygame.draw.circle(target, ink, center, 6, width=stroke)
+
+    def draw_control_help(self, target: pygame.Surface) -> None:
+        if self.state != "playing" or self.difficulty_menu_open or self.hovered_action not in CONTROL_HELP:
+            return
+        title, shortcut, description = CONTROL_HELP[self.hovered_action]
+        width, height = target.get_size()
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        panel = pygame.Rect(mouse_x + 18, mouse_y + 18, min(350, width - 32), 88)
+        if panel.right > width - 16:
+            panel.right = width - 16
+        if panel.bottom > height - 16:
+            panel.bottom = height - 16
+        pygame.draw.rect(target, (7, 16, 31), panel, border_radius=12)
+        pygame.draw.rect(target, (*CYAN, 104), panel, width=1, border_radius=12)
+        icon_center = (panel.left + 24, panel.top + 25)
+        pygame.draw.circle(target, (17, 31, 52), icon_center, 14)
+        self.draw_control_icon(target, self.hovered_action, icon_center, CYAN, True)
+        self.draw_text(target, title, (panel.left + 46, panel.top + 13), 11, TEXT, True)
+        key_rect = pygame.Rect(panel.right - 38, panel.top + 10, 26, 22)
+        pygame.draw.rect(target, (21, 35, 57), key_rect, border_radius=6)
+        pygame.draw.rect(target, (*HAIRLINE, 62), key_rect, width=1, border_radius=6)
+        self.draw_text(target, shortcut, key_rect.center, 9, MUTED, True, "center")
+        self.draw_wrapped_text(
+            target,
+            description,
+            pygame.Rect(panel.left + 14, panel.top + 45, panel.width - 28, 34),
+            9,
+            MUTED,
+            2,
         )
 
     def draw_button(
@@ -1169,6 +1388,8 @@ class NeonArrowApp:
         mouse = pygame.mouse.get_pos()
         hovered = rect.collidepoint(mouse) and enabled
         pressed = hovered and bool(pygame.mouse.get_pressed(num_buttons=3)[0])
+        if hovered and action in CONTROL_HELP:
+            self.hovered_action = action
         border = color if enabled else (73, 89, 118)
 
         visual = rect.copy()
@@ -1179,8 +1400,35 @@ class NeonArrowApp:
         pygame.draw.rect(target, (*border, 112 if hovered else 58), visual, width=1, border_radius=10)
 
         label_color = TEXT if enabled else (102, 116, 142)
-        text_pos = visual.center
-        self.draw_text(target, label, text_pos, 15 if large else 11, label_color, True, "center")
+        if action in CONTROL_HELP:
+            compact = visual.width < 116
+            icon_radius = 10 if compact else 11
+            icon_center = (visual.left + icon_radius + 7, visual.centery)
+            pygame.draw.circle(
+                target,
+                _mix((10, 19, 33), color, 0.10 if enabled else 0.03),
+                icon_center,
+                icon_radius,
+            )
+            self.draw_control_icon(target, action, icon_center, color, enabled)
+            font_size = 9 if compact else 11
+            self.draw_text(
+                target,
+                label,
+                (icon_center[0] + icon_radius + 6, visual.centery),
+                font_size,
+                label_color,
+                True,
+                "midleft",
+            )
+            if not compact:
+                shortcut = CONTROL_HELP[action][1]
+                key_rect = pygame.Rect(visual.right - 27, visual.centery - 9, 20, 18)
+                pygame.draw.rect(target, (19, 31, 50), key_rect, border_radius=5)
+                pygame.draw.rect(target, (*border, 52 if enabled else 26), key_rect, width=1, border_radius=5)
+                self.draw_text(target, shortcut, key_rect.center, 8, MUTED if enabled else SUBTLE, True, "center")
+        else:
+            self.draw_text(target, label, visual.center, 15 if large else 11, label_color, True, "center")
         if enabled:
             self.buttons.append((rect.copy(), action))
 
@@ -1194,28 +1442,34 @@ class NeonArrowApp:
         self.draw_text(target, f"剩余 {len(self.arrows):02d}", (board_panel.right - 22, title_y), 10, live_color, True, "topright")
 
         grid_rect = pygame.Rect(origin[0], origin[1], cell * GRID_COLS, cell * GRID_ROWS)
-        grid_layer = pygame.Surface(grid_rect.size, pygame.SRCALPHA)
-        pygame.draw.rect(grid_layer, (5, 12, 24, 228), grid_layer.get_rect(), border_radius=16)
-        for gy in range(GRID_ROWS):
-            for gx in range(GRID_COLS):
-                if (gx + gy) % 2:
-                    pygame.draw.rect(
-                        grid_layer,
-                        (42, 64, 92, 10),
-                        pygame.Rect(gx * cell + 1, gy * cell + 1, max(1, cell - 2), max(1, cell - 2)),
-                    )
-        for x in range(GRID_COLS + 1):
-            px = min(grid_rect.width - 1, x * cell)
-            pygame.draw.line(grid_layer, (112, 145, 177, 18), (px, 0), (px, grid_rect.height))
-        for y in range(GRID_ROWS + 1):
-            py = min(grid_rect.height - 1, y * cell)
-            pygame.draw.line(grid_layer, (112, 145, 177, 18), (0, py), (grid_rect.width, py))
-        pygame.draw.rect(grid_layer, (*HAIRLINE, 42), grid_layer.get_rect(), width=1, border_radius=16)
+        grid_key = (grid_rect.width, grid_rect.height, cell)
+        grid_layer = self._grid_cache.get(grid_key)
+        if grid_layer is None:
+            grid_layer = pygame.Surface(grid_rect.size, pygame.SRCALPHA)
+            pygame.draw.rect(grid_layer, (5, 12, 24, 228), grid_layer.get_rect(), border_radius=16)
+            for gy in range(GRID_ROWS):
+                for gx in range(GRID_COLS):
+                    if (gx + gy) % 2:
+                        pygame.draw.rect(
+                            grid_layer,
+                            (42, 64, 92, 10),
+                            pygame.Rect(gx * cell + 1, gy * cell + 1, max(1, cell - 2), max(1, cell - 2)),
+                        )
+            for x in range(GRID_COLS + 1):
+                px = min(grid_rect.width - 1, x * cell)
+                pygame.draw.line(grid_layer, (112, 145, 177, 18), (px, 0), (px, grid_rect.height))
+            for y in range(GRID_ROWS + 1):
+                py = min(grid_rect.height - 1, y * cell)
+                pygame.draw.line(grid_layer, (112, 145, 177, 18), (0, py), (grid_rect.width, py))
+            pygame.draw.rect(grid_layer, (*HAIRLINE, 42), grid_layer.get_rect(), width=1, border_radius=16)
+            if len(self._grid_cache) >= 8:
+                self._grid_cache.clear()
+            self._grid_cache[grid_key] = grid_layer
         target.blit(grid_layer, grid_rect.topleft)
 
         self.draw_special_cells(target, now)
 
-        glow = pygame.Surface(target.get_size(), pygame.SRCALPHA)
+        glow = self.effect_layer("arrow_glow", target.get_size())
         for arrow in self.arrows:
             self.draw_arrow(glow, arrow, now)
         width, height = target.get_size()
@@ -1224,7 +1478,7 @@ class NeonArrowApp:
             points = self.exiting_arrow_points(exiting.arrow, progress)
             if not points:
                 continue
-            exit_layer = pygame.Surface(target.get_size(), pygame.SRCALPHA)
+            exit_layer = self.effect_layer("exit_arrow", target.get_size())
             self.draw_arrow(
                 exit_layer,
                 exiting.arrow,
@@ -1235,6 +1489,7 @@ class NeonArrowApp:
             )
             exit_layer.set_alpha(_exit_opacity(progress))
             glow.blit(exit_layer, (0, 0))
+            exit_layer.set_alpha(None)
         if self.shake > 0:
             offset = (
                 int(math.sin(now * 80) * 5 * (self.shake / 0.32)),
@@ -1248,7 +1503,7 @@ class NeonArrowApp:
         config = self.level["config"]
         _, cell, _ = self.board_geometry()
         radius = max(8, int(cell * 0.28))
-        fx = pygame.Surface(target.get_size(), pygame.SRCALPHA)
+        fx = self.effect_layer("special_cells", target.get_size())
         for gate in config["gates"]:
             center = self.cell_center(gate["x"], gate["y"])
             color = GOLD if gate["turn"] == "flip" else PURPLE
@@ -1392,7 +1647,9 @@ class NeonArrowApp:
             pygame.draw.circle(layer, (*CYAN, 28), head, 18 + int(pulse * 5), width=2)
 
     def draw_particles(self, target: pygame.Surface) -> None:
-        fx = pygame.Surface(target.get_size(), pygame.SRCALPHA)
+        if not self.particles:
+            return
+        fx = self.effect_layer("particles", target.get_size())
         for particle in self.particles:
             ratio = particle.life / particle.max_life
             alpha = int(255 * ratio)
@@ -1450,6 +1707,60 @@ class NeonArrowApp:
         self.draw_text(target, value, (rect.centerx, rect.bottom - 13), 18, color, True, "midbottom")
 
     def draw_overlay(self, target: pygame.Surface) -> None:
+        if self.difficulty_menu_open:
+            width, height = target.get_size()
+            dim = pygame.Surface((width, height), pygame.SRCALPHA)
+            dim.fill((1, 4, 13, 188))
+            target.blit(dim, (0, 0))
+
+            panel = pygame.Rect(0, 0, min(640, width - 90), min(360, height - 70))
+            panel.center = (width // 2, height // 2)
+            self.draw_glow(target, panel.center, min(panel.width // 3, 180), GOLD, 18)
+            self.draw_panel(target, panel, GOLD)
+            cx = panel.centerx
+
+            self.draw_text(target, "DIFFICULTY SWITCH", (cx, panel.top + 34), 10, GOLD, True, "midtop")
+            self.draw_text(target, "中途切换难度", (cx, panel.top + 62), 27, TEXT, True, "midtop")
+            mode_name = "基础模式" if self.game_mode == "basic" else "进阶模式"
+            self.draw_text(
+                target,
+                f"保持 {mode_name} 不变；切换后重新随机生成所选难度，并重置当前单关进度。",
+                (cx, panel.top + 104),
+                10,
+                MUTED,
+                False,
+                "midtop",
+            )
+
+            diff_names = ("简单", "中等", "终极困难")
+            diff_colors = (CYAN, GOLD, RED)
+            button_w = 150
+            gap = 14
+            total = button_w * 3 + gap * 2
+            start_x = cx - total // 2
+            for index, (name, color) in enumerate(zip(diff_names, diff_colors)):
+                current = index == self.level_index
+                label = ("当前 · " if current else "") + name
+                self.draw_button(
+                    target,
+                    pygame.Rect(start_x + index * (button_w + gap), panel.top + 156, button_w, 48),
+                    label,
+                    f"switch_difficulty_{index}",
+                    GREEN if current else color,
+                    enabled=not current,
+                    large=True,
+                )
+
+            self.draw_text(target, "快捷键：1 / 2 / 3 立即切换 · D 或 Esc 取消", (cx, panel.top + 226), 9, SUBTLE, False, "midtop")
+            self.draw_button(
+                target,
+                pygame.Rect(cx - 110, panel.bottom - 70, 220, 40),
+                "取消切换",
+                "close_difficulty",
+                (73, 89, 118),
+            )
+            return
+
         if self.state == "playing" or self.exiting_arrows:
             return
         width, height = target.get_size()
@@ -1568,7 +1879,7 @@ class NeonArrowApp:
                 button_rect = pygame.Rect(level_x + index * (level_w + level_gap), level_y, level_w, 38)
                 self.draw_button(target, button_rect, f"0{index + 1}  {level_config['difficulty']}", f"select_{index}", color)
 
-            self.draw_text(target, "U 撤销  ·  A 自动求解  ·  V 低动态  ·  M 音效", (cx, panel.top + 302), 9, SUBTLE, False, "midtop")
+            self.draw_text(target, "D 切换难度  ·  U 撤销  ·  A 自动求解  ·  V 低动态  ·  M 音效", (cx, panel.top + 302), 9, SUBTLE, False, "midtop")
             self.draw_button(target, pygame.Rect(cx - 142, panel.bottom - 68, 284, 46), "进入箭域", "start", CYAN, large=True)
 
         elif self.state == "level_complete":
@@ -1701,6 +2012,7 @@ class NeonArrowApp:
         now = time.perf_counter()
         visual_now = 0.0 if self.reduced_motion else now
         self.buttons.clear()
+        self.hovered_action = None
         self.draw_background(self.screen, visual_now)
         self.draw_header(self.screen)
         self.draw_sidebar(self.screen)
@@ -1709,6 +2021,7 @@ class NeonArrowApp:
         self.draw_particles(self.screen)
         self.draw_banner(self.screen, now)
         self.draw_overlay(self.screen)
+        self.draw_control_help(self.screen)
         self.draw_boot_sequence(self.screen, now)
 
     def set_demo_scene(self, scene: str) -> None:
@@ -1742,6 +2055,14 @@ class NeonArrowApp:
             self.energy = 78
             self.combo = 9
             self.score = 9780
+        elif scene == "difficulty":
+            self.game_mode = "advanced"
+            self.session_seed = 20260917
+            self.load_level(1)
+            self.energy = 64
+            self.combo = 5
+            self.score = 3560
+            self.difficulty_menu_open = True
         elif scene == "complete":
             self.load_level(2)
             self.arrows = []

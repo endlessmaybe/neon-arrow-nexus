@@ -4,7 +4,7 @@
 
 ## A. 个人信息
 
-- [ ] 在 `BLOG_DRAFT.md` 填姓名 / 学号；
+- [ ] 在 `BLOG_DRAFT.md` 填学号；
 - [ ] 确认博客园昵称与课程名单一致；
 - [ ] 不在公开仓库提交任何密码、Cookie、Token 或个人隐私文件。
 
@@ -13,6 +13,7 @@
 - [ ] 在本人 GitHub/Gitee 创建仓库；
 - [ ] 推送当前项目；
 - [ ] 打开远程仓库确认 `README.md`、`main.py`、`neon_arrow/`、`tests/`、`docs/`、`requirements*.txt` 都能看到；
+- [ ] 确认 `docs/ASSIGNMENT_REQUIREMENTS.md`、`docs/AIGC_LOG.md`、`docs/TEST_REPORT.md` 与博客稿一起提交；
 - [ ] 确认仓库中没有残留 `index.html`、`styles.css`、`src/*.js`、旧 Node 构建脚本或旧 JS 测试；
 - [ ] 把真实仓库 URL 填入 `BLOG_DRAFT.md`；
 - [ ] 不要只上传 zip，保留 Git 提交记录。
@@ -26,7 +27,7 @@ neon-arrow-nexus
 ## C. 最终运行
 
 ```bash
-python -m pytest -q tests/test_python_engine.py tests/test_python_app.py tests/test_python_features.py
+python -m pytest -q tests/test_python_engine.py tests/test_python_app.py tests/test_python_features.py tests/test_assignment_acceptance.py
 python main.py --headless-check
 ```
 
@@ -41,15 +42,25 @@ python main.py --headless-check
 - [ ] 终极困难开局应允许出现多条安全箭，不再要求唯一解；
 - [ ] 确认难度只有简单 / 中等 / 终极困难三档，不存在第 4 档。
 
+### T01–T06 最后人工抽查
+
+- [ ] T01：点一支前方无阻挡箭，确认正常飞出并消失；
+- [ ] T02：点一支前方有阻挡箭，确认箭保留且容错减少；
+- [ ] T03：检查边缘朝外箭，确认正常离场且无越界异常；
+- [ ] T04：完成一局，确认最后一支箭离场后进入通关结算；
+- [ ] T05：主动耗尽容错，确认进入失败状态并能重开；
+- [ ] T06：游戏中按 `R`，确认同一 RUN 的布局和初始状态恢复。
+
 ## D. 截图建议
 
-博客正文建议放 5 张 Python/Pygame 实际运行截图：
+博客正文当前安排 6 张主要 Python/Pygame 实际运行截图：
 
 1. **启动页**：基础 / 进阶双模式 + 三档难度选择；
 2. **基础模式**：单格四方向箭头；
 3. **进阶中等**：画面中出现折光门；
 4. **进阶终极困难**：高密度随机长箭、反相门、双跃迁与相位锁；
 5. **通关结果**：显示得分与星级。
+6. **难度切换**：展示游戏中 `D` 打开的三档难度面板。
 
 尽量不要只放代码截图，直接展示游戏画面会更容易看出完成度和新增机制。
 
@@ -59,7 +70,8 @@ python main.py --headless-check
 
 - [ ] 复制 `BLOG_DRAFT.md`；
 - [ ] 替换所有 `【提交前填写】`；
-- [ ] 把 4 张实机截图插入对应位置；
+- [ ] 把文中 6 张主要实机截图上传到博客园，并将相对路径替换为博客园图片地址；
+- [ ] 确认正文包含“项目展示、项目介绍/实现、AIGC 使用过程、T01–T06、PSP、心得体会”；
 - [ ] 检查 Markdown 表格、代码块和图片预览；
 - [ ] 把 Git 仓库设为老师可访问；
 - [ ] 使用本人登录状态打开本次作业正文，再核对一次是否有课堂专属字段/格式要求。

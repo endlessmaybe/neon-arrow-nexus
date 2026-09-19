@@ -113,7 +113,11 @@ BASIC_LEVEL_CONFIGS: list[dict[str, Any]] = [
 
 TOTAL_LEVELS = len(LEVEL_CONFIGS)
 MAX_GENERATION_ATTEMPTS = 48_000
-MAX_GENERATION_RESTARTS = 24
+# Dense terminal boards occasionally satisfy the occupancy target but miss the
+# full solvability/phase-lock constraints for many deterministic retries.  A
+# slightly larger retry budget keeps the same RUN reproducibility while closing
+# that rare startup failure without affecting normal seeds.
+MAX_GENERATION_RESTARTS = 64
 
 COLORS = [
     (53, 242, 255),

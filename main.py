@@ -39,7 +39,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--screenshot", type=Path, help="渲染一张真实 Pygame 游戏截图")
     parser.add_argument(
         "--scene",
-        choices=["setup", "basic", "ready", "level1", "playing", "level2", "level3", "complete"],
+        choices=["setup", "basic", "ready", "level1", "playing", "level2", "level3", "difficulty", "complete"],
         default="ready",
         help="截图场景",
     )

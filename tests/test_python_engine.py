@@ -198,6 +198,13 @@ def test_generation_stress_sample_is_stable_and_solvable() -> None:
             assert all(2 <= len(arrow["cells"]) <= 4 for arrow in level["arrows"])
 
 
+def test_terminal_generation_handles_known_dense_retry_seeds() -> None:
+    for seed in (268185663, 2111439849):
+        level = create_level(2, seed)
+        assert len(level["arrows"]) == level["config"]["target"]
+        assert is_solution_valid(level)
+
+
 def test_refraction_flip_and_portal_change_real_ray_path() -> None:
     refracted = trace_ray(
         {"x": 3, "y": 4},

@@ -58,6 +58,7 @@ Release 说明草稿：
 - 基础模式：单格四方向箭头，按作业原规则做直线路径判断；
 - 进阶模式：2–4 格随机长箭，加入折光、反相、双跃迁和阶段相位锁；
 - 每次启动先选择玩法模式和简单 / 中等 / 终极困难；
+- 游戏过程中可按 D 打开难度切换面板，直接改为简单 / 中等 / 终极困难；
 - 支持撤销、自动存档、AI 自动求解、计分/计时/星级、量子超载、低动态和音效；
 - Windows 单文件 EXE，可直接双击运行。
 ```
@@ -82,7 +83,9 @@ https://www.cnblogs.com/Heimdallr
 docs/BLOG_DRAFT.md
 ```
 
-正文开头已经按老师指定的 Markdown 表格格式整理为“课程 / 作业要求 / 作业目标 / 学号”四行；Git 仓库地址紧跟表格单独列出。学号和最终 GitHub URL 在正式发布前再填，不在当前预览阶段编造。
+正文已经按作业提交结构重新整理为：课程信息表 → 项目展示 → 项目介绍 → 核心实现 → AIGC 使用过程 → T01–T06 与自动测试 → PSP → 运行方法 → 心得体会 → 总结。学号和最终 GitHub URL 在正式发布前再填，不在当前预览阶段编造。
+
+GitHub 侧同时提供 `docs/ASSIGNMENT_REQUIREMENTS.md`，把作业要求逐项映射到代码、测试和截图；老师不需要只靠 README 的功能描述判断是否完成。
 
 ### 拟上传图片顺序
 
@@ -91,17 +94,19 @@ docs/BLOG_DRAFT.md
 3. `py-02-level2.png`：进阶中等；
 4. `py-03-level3.png`：进阶终极困难；
 5. `py-04-complete.png`：结果页；
-6. `py-06-arrow-exit.png`：箭头有序离场中间帧，可放在动画说明段落。
+6. `py-06-arrow-exit.png`：箭头有序离场中间帧，可放在动画说明段落；
+7. `py-07-difficulty-switch.png`：游戏进行中的难度切换面板；
+8. `py-08-control-icons.png`：优化后的统一功能图标、文字和快捷键实战布局。
 
 发布到博客园时，相对图片路径需要替换为博客园上传图片后返回的真实地址；当前草稿先保留仓库相对路径，方便 GitHub 直接预览。
 
 ## 3. 发布前还要核对的点
 
-- [x] 最终全量 pytest 通过：`44 passed in 65.30s`；
+- [x] 最终全量 pytest 通过：`58 passed in 74.01s`，其中 T01–T06 为独立自动测试；
 - [x] 源码 `--headless-check` 通过；
 - [x] 重新构建 EXE，打包后的 EXE 自检通过；
 - [x] 启动页截图和基础模式截图为本轮新版本；
-- [x] README / BLOG / DESIGN / TEST_REPORT 已统一到“基础单格 + 进阶长箭 + 启动选难度”的口径；
+- [x] README / BLOG / TEST_REPORT 已统一到“基础单格 + 进阶长箭 + 启动选难度 + 实战 D 切换难度 + 功能图标说明 + 性能优化”的口径；
 - [ ] Git 工作区不含临时输出文件、Token、Cookie、个人隐私；
 - [ ] 用户本人过目并明确同意后，再执行任何远程上传或发布。
 
@@ -127,7 +132,7 @@ gh release create v1.0.0-coursework dist/NeonArrowNexus-Python.exe
 
 ```text
 dist/NeonArrowNexus-Python.exe
-28,251,082 bytes
-SHA-256 75DA9C29F7CCC53947E114B24619ADA9557D10F2472060FE5B12641D5EF4687A
+28,259,390 bytes
+SHA-256 353E9F7740022B23D717A3E0A32EAED244FCEAE6EC45317064D4BF01A1422126
 ```
 
