@@ -102,19 +102,19 @@ GitHub 侧同时提供 `docs/ASSIGNMENT_REQUIREMENTS.md`，把作业要求逐项
 
 ## 3. 发布前还要核对的点
 
-- [x] 最终全量 pytest 通过：`58 passed in 74.01s`，其中 T01–T06 为独立自动测试；
+- [x] 最终全量 pytest 通过：`58 passed`，其中 T01–T06 为独立自动测试；
 - [x] 源码 `--headless-check` 通过；
 - [x] 重新构建 EXE，打包后的 EXE 自检通过；
 - [x] 启动页截图和基础模式截图为本轮新版本；
 - [x] README / BLOG / TEST_REPORT 已统一到“基础单格 + 进阶长箭 + 启动选难度 + 实战 D 切换难度 + 功能图标说明 + 性能优化”的口径；
-- [ ] Git 工作区不含临时输出文件、Token、Cookie、个人隐私；
+- [x] 已扫描最终文本文件，未发现疑似 Token / API Key；临时构建产物仍放在 H: 临时目录，不进入提交；
 - [ ] 用户本人过目并明确同意后，再执行任何远程上传或发布。
 
 ## 4. 当前远程状态
 
 - Git 仓库当前没有配置 remote；
-- 本机 `gh auth status` 当前显示未登录 GitHub；
-- 本地发布候选已经整理成独立 Git 提交 `feat: finalize Python arrow game and publish preview`，方便本人过目后直接基于这个版本创建远程仓库；
+- 本轮没有触发 GitHub 登录、建仓、push 或 Release 上传；
+- 当前最终锁定版已整理为一笔本地 Git 提交，方便本人过目后直接基于该提交创建远程仓库；
 - 因用户要求“先过目、同意后再上传”，本轮不会为解决登录问题而主动触发 GitHub 登录，也不会创建远程仓库；
 - 博客园同样只准备 Markdown 和图片清单，不发布草稿、不改公开文章。
 
@@ -132,7 +132,7 @@ gh release create v1.0.0-coursework dist/NeonArrowNexus-Python.exe
 
 ```text
 dist/NeonArrowNexus-Python.exe
-28,259,390 bytes
-SHA-256 353E9F7740022B23D717A3E0A32EAED244FCEAE6EC45317064D4BF01A1422126
+28,258,696 bytes
+SHA-256 AFF0471171E1697155A5FA34EF3CCCB85FBDA5F368E12E9E0CF24427550A68A1
 ```
 

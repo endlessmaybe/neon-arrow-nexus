@@ -216,7 +216,7 @@ python -m pytest -q tests/test_python_engine.py tests/test_python_app.py tests/t
 最终实测：
 
 ```text
-58 passed in 74.01s
+58 passed
 ```
 
 其中 `tests/test_assignment_acceptance.py` 专门把 T01–T06 写成 6 个独立测试。除此之外，全量回归还覆盖：
@@ -232,7 +232,7 @@ python -m pytest -q tests/test_python_engine.py tests/test_python_app.py tests/t
 - 游戏中 `D` 切换难度；
 - 功能按钮悬停说明；
 - 低动态和音效设置持久化；
-- 已知高密度 RUN `268185663` 的生成回归。
+- 已知高密度 RUN `268185663`、`2111439849` 的生成回归，终极困难使用 64 轮确定性重试预算兜住稀有高密度边界。
 
 另外运行：
 
