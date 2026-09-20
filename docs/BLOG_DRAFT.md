@@ -6,7 +6,7 @@
 | 这个作业要求在哪里 | [2026 秋软件工程个人作业（第二次）](https://edu.cnblogs.com/campus/fzu/202601SofwareEngineering/homework/16717) |
 | 这个作业的目标 | 使用 Python 和 AIGC 完成“一箭又一箭”小游戏，并完成测试、AIGC 使用记录与项目总结 |
 | 学号 | 【提交前填写】 |
-| GitHub 仓库 | 【提交前填写】 |
+| GitHub 仓库 | https://github.com/endlessmaybe/Looong/tree/neon-arrow-nexus |
 
 > 本文对应仓库最终提交版。正式发布到博客园前，只需要补上学号、GitHub 地址，并把文中的仓库相对图片上传到博客园后替换为博客园图片地址。
 
