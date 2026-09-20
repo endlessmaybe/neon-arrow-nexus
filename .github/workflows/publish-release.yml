@@ -13,7 +13,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout tagged source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Package and publish release
         shell: pwsh
@@ -21,7 +21,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          $packageJson = & ./scripts/package-release.ps1 -Version $env:RELEASE_TAG
+          $outputRoot = Join-Path $env:RUNNER_TEMP "neon-arrow-release"
+          $packageJson = & ./scripts/package-release.ps1 `
+            -Version $env:RELEASE_TAG `
+            -OutputRoot $outputRoot
           $package = $packageJson | ConvertFrom-Json
 
           $notesPath = Join-Path $env:RUNNER_TEMP "release-notes.md"
