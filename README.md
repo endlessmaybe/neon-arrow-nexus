@@ -4,13 +4,15 @@
 
 这份项目的最终实现唯一使用 **Python 3 + Pygame**。现在把作业要求的原始玩法和后续创新明确拆成两套规则：**基础模式**保留“单格四方向箭头 + 沿直线检查到边界”的题目主体，**进阶模式**才使用随机长箭、折光/反相、跃迁、相位锁、量子能量等扩展机制。两种模式都提供 3 个可通关关卡，并共用计分、计时、存档、AI 求解、离场动画和高清界面。
 
-如果只想直接玩，双击：
+如果只想直接玩，**优先从 GitHub 右侧 Releases 下载 Windows 成品包**，完整解压后双击 `双击启动游戏.bat`。也可以直接运行：
 
 ```text
 dist/NeonArrowNexus-Python.exe
 ```
 
 这个 EXE 是用 PyInstaller 从 `main.py` 打出来的单文件 Windows 程序，不需要另外安装 Python 环境。
+
+> 注意：GitHub 的 **Code → Download ZIP** 是“源码包”，不是最推荐的成品下载入口。如果使用源码 ZIP，也必须先完整解压后再双击 BAT；不要直接在压缩包预览窗口中运行。新的启动脚本会检查 `dist/NeonArrowNexus-Python.exe` 是否存在，并在启动失败时保留错误信息，不再一闪而过。
 
 当前最终版默认以 **1600×1000 原生像素**启动，并在 Windows 下启用 **Per-Monitor V2 高 DPI 感知**。这样在系统 125% / 150% 缩放时，不再由 Windows 把低分辨率窗口二次放大，文字、细线、箭路边缘和 HUD 会保持清晰；窗口仍支持手动缩放。
 
@@ -236,6 +238,18 @@ python -m pip install -r requirements-dev.txt
 
 ```text
 dist/NeonArrowNexus-Python.exe
+```
+
+或者直接双击仓库根目录的：
+
+```text
+双击启动游戏.bat
+```
+
+发布版 ZIP 可用下面的脚本生成；输出默认放在 `H:\CodexTemp\work\neon-arrow-nexus\release`，不会把临时打包目录塞进仓库：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/package-release.ps1 -Version v1.0.0
 ```
 
 ## 8. 自动测试
