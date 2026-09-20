@@ -1,0 +1,39 @@
+name: Publish Windows release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v4
+
+      - name: Package and publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $packageJson = & ./scripts/package-release.ps1 -Version $env:RELEASE_TAG
+          $package = $packageJson | ConvertFrom-Json
+
+          $notesPath = Join-Path $env:RUNNER_TEMP "release-notes.md"
+          @"
+          Windows x64 coursework release of Neon Arrow Nexus.
+
+          Download the ZIP below, extract it completely, then double-click the BAT launcher or run `dist/NeonArrowNexus-Python.exe` directly. Python is not required.
+
+          SHA-256: `$($package.Sha256)`
+          "@ | Set-Content -LiteralPath $notesPath -Encoding utf8
+
+          gh release create $env:RELEASE_TAG $package.Zip `
+            --repo $env:GITHUB_REPOSITORY `
+            --title "Neon Arrow Nexus $env:RELEASE_TAG" `
+            --notes-file $notesPath
