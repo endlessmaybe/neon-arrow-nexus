@@ -209,7 +209,7 @@ dist/NeonArrowNexus-Python.exe
 最终大小：
 
 ```text
-28,259,189 bytes
+28,258,481 bytes
 ```
 
 随后直接运行 **打包后的 EXE** 做多层验收：
@@ -221,7 +221,7 @@ launch_game.bat --headless-check    -> PASS
 中文双击启动 BAT --headless-check     -> PASS
 ```
 
-最终桌面 EXE 会在首帧直接显示完整模式/难度选择 UI；不再用近黑色启动遮罩覆盖真实界面。构建脚本同时显式嵌入 Windows **Per-Monitor V2 DPI manifest**，把 DPI awareness 固定在进程/SDL 初始化之前；源码中的 Win32 兼容回退仍保留。实机对照中，用户旧 GitHub 成品截图的客户区约 **92.85%** 为纯黑，而本轮重新构建后的真实 EXE 窗口截图纯黑像素仅约 **0.03%**，深色渐变背景、面板和完整 UI 均正常绘制。源码 `python main.py --headless-check`、打包后的 EXE、自带英文 BAT 和中文双击 BAT 均完成真实冒烟。最终锁定 EXE 大小为 **28,259,189 bytes**，SHA-256 为 `B764DE3CA3CE364F05110AC740D1213AF5B223AA8CA4DD0A400449172BD329AD`。
+最终桌面 EXE 会在首帧直接显示完整模式/难度选择 UI；不再用近黑色启动遮罩覆盖真实界面。构建脚本同时显式嵌入 Windows **Per-Monitor V2 DPI manifest**，把 DPI awareness 固定在进程/SDL 初始化之前；源码中的 Win32 兼容回退仍保留。实机对照中，用户旧 GitHub 成品截图的客户区约 **92.85%** 为纯黑，而本轮重新构建后的真实 EXE 窗口截图纯黑像素仅约 **0.03%**，深色渐变背景、面板和完整 UI 均正常绘制。源码 `python main.py --headless-check`、打包后的 EXE、自带英文 BAT 和中文双击 BAT 均完成真实冒烟。最终锁定 EXE 大小为 **28,258,481 bytes**，SHA-256 为 `CDD85F2CC464B30708098F2B9A6BAFA3DD48867FFD0ED4C604080014B74766E9`。
 
 ## 8. 结论
 

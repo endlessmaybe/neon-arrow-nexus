@@ -35,19 +35,19 @@ Python/Pygame 实现的“一箭又一箭”课程项目：基础单格模式 + 
 Tag：
 
 ```text
-v1.0.4
+v1.0.5
 ```
 
 Release 标题：
 
 ```text
-Neon Arrow Nexus v1.0.4
+Neon Arrow Nexus v1.0.5
 ```
 
 附件：
 
 ```text
-NeonArrowNexus-v1.0.4-Windows-x64.zip
+NeonArrowNexus-v1.0.5-Windows-x64.zip
 ```
 
 Release 说明草稿：
@@ -122,7 +122,7 @@ GitHub 侧同时提供 `docs/ASSIGNMENT_REQUIREMENTS.md`，把作业要求逐项
 
 ```text
 dist/NeonArrowNexus-Python.exe
-28,259,189 bytes
-SHA-256 B764DE3CA3CE364F05110AC740D1213AF5B223AA8CA4DD0A400449172BD329AD
+28,258,481 bytes
+SHA-256 CDD85F2CC464B30708098F2B9A6BAFA3DD48867FFD0ED4C604080014B74766E9
 ```
 
