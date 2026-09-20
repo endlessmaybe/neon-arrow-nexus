@@ -33,7 +33,7 @@ jobs:
 
           Download the ZIP below, extract it completely, then double-click the BAT launcher or run `dist/NeonArrowNexus-Python.exe` directly. Python is not required.
 
-          SHA-256: `$($package.Sha256)`
+          SHA-256: $($package.Sha256)
           "@ | Set-Content -LiteralPath $notesPath -Encoding utf8
 
           gh release create $env:RELEASE_TAG $package.Zip `
