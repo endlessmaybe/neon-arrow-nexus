@@ -81,7 +81,7 @@ def test_t03_outward_edge_arrows_exit_without_out_of_bounds_error() -> None:
         assert result["path"] == []
 
 
-def test_t04_clearing_last_arrow_enters_level_complete_state() -> None:
+def test_t04_clearing_last_arrow_enters_result_then_next_level() -> None:
     app = _app()
     last_arrow = _manual_arrow("last", 12, 5, "right")
     app.arrows = [last_arrow]  # type: ignore[list-item]
@@ -92,6 +92,11 @@ def test_t04_clearing_last_arrow_enters_level_complete_state() -> None:
 
     assert app.arrows == []
     assert app.state == "level_complete"
+
+    app.next_level()
+    assert app.level_index == 1
+    assert app.state == "playing"
+    assert app.arrows
     pygame.quit()
 
 

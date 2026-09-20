@@ -118,6 +118,7 @@ def test_basic_mode_is_real_single_cell_assignment_rule() -> None:
     assert app.state == "playing"
     assert app.game_mode == "basic"
     assert app.level_index == 1
+    assert app.training_mode is False
     assert all(len(arrow["cells"]) == 1 for arrow in app.arrows)
     assert app.level["config"]["gates"] == []
     assert app.level["config"]["portals"] == []
@@ -135,6 +136,7 @@ def test_advanced_mode_still_uses_long_arrow_mechanics() -> None:
 
     assert app.game_mode == "advanced"
     assert app.level_index == 2
+    assert app.training_mode is False
     assert any(len(arrow["cells"]) > 1 for arrow in app.arrows)
     assert app.level["config"]["portals"]
     assert app.level["config"]["phase_locks"]

@@ -1,6 +1,6 @@
 # 霓虹箭域 Python 版测试报告
 
-测试日期：2026-09-19
+测试日期：2026-09-20
 
 ## 1. 最终技术栈
 
@@ -39,7 +39,7 @@ python -m pytest -q tests/test_python_engine.py tests/test_python_app.py tests/t
 | T01 | 点击前方无阻挡的箭头 | PASS：正式点击逻辑会进入离场队列并移除箭头；源码与 EXE 的 `--headless-check` 都实际完成了一次安全点击 |
 | T02 | 点击前方有阻挡的箭头 | PASS：路径判定进入碰撞分支，箭头不移除，稳定度/容错减少 |
 | T03 | 点击位于边缘且朝棋盘外的箭头 | PASS：射线以棋盘边界为正常终止条件，不发生数组/坐标越界 |
-| T04 | 清除本关全部箭头 | PASS：最后一支箭完成离场后进入关卡完成/最终结算状态 |
+| T04 | 清除本关全部箭头 | PASS：最后一支箭完成离场后进入关卡完成状态；执行“下一关”后加载第 2 关并恢复 `playing` |
 | T05 | 失误次数耗尽 | PASS：稳定度归零进入失败状态，并提供重开流程 |
 | T06 | 游戏中重新开始 | PASS：同一 RUN 重新加载相同初始布局，同时重置本关计时、分数、连击、能量与容错状态 |
 
@@ -49,7 +49,7 @@ python -m pytest -q tests/test_python_engine.py tests/test_python_app.py tests/t
 
 | 编号 | 测试项 | 结果 |
 | --- | --- | --- |
-| P01 | 游戏严格只有 3 关，第 4 关索引被拒绝 | PASS |
+| P01 | 游戏严格只有 3 关，第 4 关索引被拒绝；标准流程可从第 1 关继续进入第 2 关 | PASS |
 | P02 | 简单 → 中等 → 终极困难的难度顺序正确 | PASS |
 | P03 | 多组 RUN 下箭路数量、倒计时落在各自范围 | PASS |
 | P04 | 同一 RUN 可复现，不同 RUN 会产生不同布局 | PASS |
@@ -112,6 +112,7 @@ python main.py --headless-check
 当前正式 Python 版已实现并验证：
 
 - 每次启动强制先进入“基础 / 进阶 + 简单 / 中等 / 终极困难”选择页；
+- 启动页“开始游戏”进入正式关卡流程而不是单关训练；选择简单可完整经历第 1 → 2 → 3 关；
 - 基础模式使用作业原始的单格四方向箭头，只做直线到边界的阻挡判断；
 - 进阶模式继续使用 2–4 格随机长箭与折光/反相/双跃迁/阶段相位锁；
 - 存档不会绕过启动选择；选中与存档一致的模式和难度后才提供“继续上次进度”；
@@ -208,7 +209,7 @@ dist/NeonArrowNexus-Python.exe
 最终大小：
 
 ```text
-28,258,696 bytes
+28,259,280 bytes
 ```
 
 随后直接运行 **打包后的 EXE** 做两次验收：
@@ -218,7 +219,7 @@ dist/NeonArrowNexus-Python.exe
 --screenshot ... --scene level2     -> exit code 0
 ```
 
-最终桌面 EXE 已自行输出新的功能图标实战场景为 `docs/screenshots/py-08-control-icons.png`，分辨率为 **1600×1000**，文件大小 **91,728 bytes**，进程退出码 `0`。这次截图直接使用 `level2` 场景，确认桌面成品真实包含统一矢量功能图标、文字和快捷键布局，而不是只验证源码。源码 `python main.py --headless-check` 与打包后的 EXE `--headless-check` 均成功。程序会在创建 Pygame 窗口前显式申请 Windows Per-Monitor V2 DPI awareness，并保留旧系统兼容回退。进阶箭体继续使用真实 2–4 格占用与有序离场；基础模式则只保留单格逻辑占用。本轮在 **2026-09-19** 再次使用当前源码执行 `scripts/build-python.ps1`，随后重新运行 EXE `--headless-check` 与 EXE 自渲染截图均通过；最终锁定 EXE 大小为 **28,258,696 bytes**，SHA-256 为 `AFF0471171E1697155A5FA34EF3CCCB85FBDA5F368E12E9E0CF24427550A68A1`。
+最终桌面 EXE 已自行输出新的功能图标实战场景为 `docs/screenshots/py-08-control-icons.png`，分辨率为 **1600×1000**，进程退出码 `0`。这次截图直接使用 `level2` 场景，确认桌面成品真实包含统一矢量功能图标、文字和快捷键布局，而不是只验证源码。源码 `python main.py --headless-check` 与打包后的 EXE `--headless-check` 均成功。程序会在创建 Pygame 窗口前显式申请 Windows Per-Monitor V2 DPI awareness，并保留旧系统兼容回退。进阶箭体继续使用真实 2–4 格占用与有序离场；基础模式则只保留单格逻辑占用。本轮在 **2026-09-20** 使用当前源码重新执行 `scripts/build-python.ps1`，随后重新运行 EXE `--headless-check` 并通过；最终锁定 EXE 大小为 **28,259,280 bytes**，SHA-256 为 `09CFC2042D0A367B3D7C9391B02CCF94FFC060640F9E623CB0D6112C00BE2F8B`。
 
 ## 8. 结论
 

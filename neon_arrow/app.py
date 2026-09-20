@@ -485,7 +485,12 @@ class NeonArrowApp:
             return
         self.game_mode = self.pending_mode
         self.session_seed = create_session_seed()
-        self.training_mode = True
+        # Starting from the launch chooser is the normal coursework campaign,
+        # not a one-level training session.  This keeps the required three
+        # playable levels connected by the level-complete -> next-level flow.
+        # The player may still start from level 2/3 by choosing that difficulty,
+        # while choosing level 1 gives the complete three-level campaign.
+        self.training_mode = False
         self.score = 0
         self.energy = 0
         self.combo = 0
@@ -1154,7 +1159,7 @@ class NeonArrowApp:
         content_width = rect.width - 44
         y = rect.top + 20
         mode_name = "基础模式" if self.game_mode == "basic" else "进阶模式"
-        self.draw_text(target, f"{mode_name} · 难度 {self.level_index + 1} / 3", (x, y), 10, CYAN, True)
+        self.draw_text(target, f"{mode_name} · 第 {self.level_index + 1} 关 / 3", (x, y), 10, CYAN, True)
         y += 21
         self.draw_text(target, config["name"], (x, y), 21, TEXT, True)
         y += 30
@@ -1182,7 +1187,7 @@ class NeonArrowApp:
         pygame.draw.rect(target, (12, 25, 49), status, border_radius=11)
         status_color = GREEN if self.lives > 1 else RED
         pygame.draw.rect(target, (*status_color, 58), status, width=1, border_radius=11)
-        self.draw_text(target, "稳定度", (status.left + 12, status.centery), 10, MUTED, True, "midleft")
+        self.draw_text(target, f"剩余失误 {self.lives}", (status.left + 12, status.centery), 10, MUTED, True, "midleft")
         pip_x = status.right - 16
         for index in range(int(config["lives"]) - 1, -1, -1):
             active = index < self.lives
@@ -1834,7 +1839,10 @@ class NeonArrowApp:
             summary = "请选择模式和难度后开始新一局。"
             if ready_to_start:
                 mode_name = "基础模式" if self.pending_mode == "basic" else "进阶模式"
-                summary = f"已选择：{mode_name} · {diff_names[self.pending_difficulty]}"
+                summary = (
+                    f"已选择：{mode_name} · 第 {self.pending_difficulty + 1} 关 "
+                    f"({diff_names[self.pending_difficulty]})"
+                )
             self.draw_text(target, summary, (cx, panel.top + 363), 10, TEXT if ready_to_start else MUTED, True, "midtop")
 
             can_resume = (
