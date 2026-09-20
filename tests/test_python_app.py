@@ -21,6 +21,34 @@ def test_real_launch_does_not_hide_the_setup_ui_behind_a_boot_overlay() -> None:
     pygame.quit()
 
 
+def test_setup_screen_is_visibly_rendered_instead_of_near_black() -> None:
+    app = NeonArrowApp((1100, 700), load_save=False)
+    app.render()
+    pixels = pygame.surfarray.array3d(app.screen)
+    # A real launch must retain a clearly visible blue UI shell behind the
+    # chooser.  This catches the previous regression where the setup overlay
+    # made almost the whole packaged window look black despite controls being
+    # technically present.
+    max_channel = pixels.max(axis=2)
+    assert float(max_channel.mean()) >= 40.0
+    assert float((max_channel < 32).mean()) <= 0.15
+    pygame.quit()
+
+
+def test_reused_effect_layers_do_not_turn_the_second_frame_black() -> None:
+    app = NeonArrowApp((1100, 700), load_save=False)
+    app.render()
+    first = pygame.surfarray.array3d(app.screen)
+    app.render()
+    second = pygame.surfarray.array3d(app.screen)
+
+    first_dark = float((first.max(axis=2) < 8).mean())
+    second_dark = float((second.max(axis=2) < 8).mean())
+    assert first_dark < 0.05
+    assert second_dark < 0.05
+    pygame.quit()
+
+
 def test_pygame_window_renders_and_real_click_logic_removes_arrow() -> None:
     app = NeonArrowApp((1100, 700), load_save=False)
     app.state = "playing"

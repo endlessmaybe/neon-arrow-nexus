@@ -34,9 +34,9 @@ WINDOW_SIZE = (1600, 1000)
 MIN_WINDOW_SIZE = (1000, 660)
 FPS = 60
 
-BG_TOP = (5, 9, 18)
-BG_MID = (8, 14, 27)
-BG_BOTTOM = (8, 11, 22)
+BG_TOP = (14, 24, 43)
+BG_MID = (18, 30, 52)
+BG_BOTTOM = (15, 21, 39)
 TEXT = (240, 248, 255)
 MUTED = (144, 164, 193)
 SUBTLE = (92, 112, 145)
@@ -47,9 +47,9 @@ PURPLE = (142, 121, 255)
 GREEN = (112, 246, 181)
 GOLD = (255, 198, 92)
 RED = (255, 101, 133)
-PANEL = (10, 17, 31, 238)
-PANEL_SOFT = (14, 23, 41, 210)
-PANEL_INNER = (17, 27, 46, 186)
+PANEL = (18, 29, 49, 238)
+PANEL_SOFT = (22, 35, 58, 218)
+PANEL_INNER = (25, 39, 64, 202)
 HAIRLINE = (145, 178, 220)
 
 SAVE_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "NeonArrowNexus"
@@ -589,7 +589,10 @@ class NeonArrowApp:
             layer = pygame.Surface(size, pygame.SRCALPHA)
             self._effect_layers[name] = layer
         else:
-            layer.set_alpha(None)
+            # Preserve per-pixel transparency on cached effect layers. Using
+            # set_alpha(None) makes the transparent pixels blit as opaque black
+            # on pygame-ce/SDL after the first frame.
+            layer.set_alpha(255)
             layer.fill((0, 0, 0, 0))
         return layer
 
@@ -1497,7 +1500,7 @@ class NeonArrowApp:
             )
             exit_layer.set_alpha(_exit_opacity(progress))
             glow.blit(exit_layer, (0, 0))
-            exit_layer.set_alpha(None)
+            exit_layer.set_alpha(255)
         if self.shake > 0:
             offset = (
                 int(math.sin(now * 80) * 5 * (self.shake / 0.32)),
@@ -1772,9 +1775,13 @@ class NeonArrowApp:
         if self.state == "playing" or self.exiting_arrows:
             return
         width, height = target.get_size()
-        dim = pygame.Surface((width, height), pygame.SRCALPHA)
-        dim.fill((1, 4, 13, 176))
-        target.blit(dim, (0, 0))
+        # The launch chooser must not masquerade as a black screen.  Keep the
+        # complete game UI visible behind the setup panel; only end-of-level
+        # and failure overlays dim the underlying board.
+        if self.state != "setup":
+            dim = pygame.Surface((width, height), pygame.SRCALPHA)
+            dim.fill((1, 4, 13, 146))
+            target.blit(dim, (0, 0))
 
         is_ready = self.state == "ready"
         is_setup = self.state == "setup"

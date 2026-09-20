@@ -264,12 +264,13 @@ python -m pytest -q tests/test_python_engine.py tests/test_python_app.py tests/t
 最终实测：
 
 ```text
-59 passed
+61 passed
 ```
 
 其中 `tests/test_assignment_acceptance.py` 专门把 T01–T06 写成 6 个独立测试。除此之外，全量回归还覆盖：
 
 - 每次启动必须先选择模式与难度；
+- 连续帧复用透明特效层时仍保持 per-pixel alpha，不会从第二帧开始出现大面积黑屏；
 - 标准启动进入正式关卡流程而不是单关训练；从第 1 关通关后可以进入第 2 关；
 - 基础模式全部为单格箭，且没有折光/跃迁/相位锁；
 - 进阶模式仍使用 2–4 格真实长箭；
