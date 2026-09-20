@@ -264,7 +264,7 @@ python -m pytest -q tests/test_python_engine.py tests/test_python_app.py tests/t
 最终实测：
 
 ```text
-58 passed
+59 passed
 ```
 
 其中 `tests/test_assignment_acceptance.py` 专门把 T01–T06 写成 6 个独立测试。除此之外，全量回归还覆盖：

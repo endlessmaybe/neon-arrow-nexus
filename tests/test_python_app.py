@@ -11,6 +11,16 @@ from neon_arrow.app import NeonArrowApp
 from neon_arrow.engine import TOTAL_LEVELS, safe_arrow_ids
 
 
+def test_real_launch_does_not_hide_the_setup_ui_behind_a_boot_overlay() -> None:
+    app = NeonArrowApp((1100, 700), load_save=False)
+    assert app.state == "setup"
+    assert app.boot_enabled is False
+    app.render()
+    actions = {action for _, action in app.buttons}
+    assert {"mode_basic", "mode_advanced", "difficulty_0", "difficulty_1", "difficulty_2"} <= actions
+    pygame.quit()
+
+
 def test_pygame_window_renders_and_real_click_logic_removes_arrow() -> None:
     app = NeonArrowApp((1100, 700), load_save=False)
     app.state = "playing"

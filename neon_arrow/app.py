@@ -212,8 +212,11 @@ class NeonArrowApp:
         self.banner_until = 0.0
         self.reduced_motion = False
         self.boot_started_at = time.perf_counter()
-        self.boot_duration = 1.15
-        self.boot_enabled = os.environ.get("SDL_VIDEODRIVER", "").lower() != "dummy"
+        self.boot_duration = 0.0
+        # Do not cover the packaged application's first frame with a near-black
+        # splash.  The coursework screenshots show the actual interactive UI,
+        # so the real executable must reveal that same UI immediately.
+        self.boot_enabled = False
         self.shake = 0.0
         self.history: list[dict[str, Any]] = []
         self.ai_queue: list[str] = []

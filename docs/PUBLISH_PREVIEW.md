@@ -30,24 +30,24 @@ Python/Pygame 实现的“一箭又一箭”课程项目：基础单格模式 + 
 - README 先写作业基础规则，再写进阶创新，避免老师先看到机关却找不到题目主体；
 - 源码入口保持 `main.py`，最终仓库不放旧 HTML / CSS / JavaScript 原型。
 
-### 拟定 Release
+### 当前 Release 方案
 
 Tag：
 
 ```text
-v1.0.0-coursework
+v1.0.4
 ```
 
 Release 标题：
 
 ```text
-Neon Arrow Nexus · 软件工程第二次个人作业
+Neon Arrow Nexus v1.0.4
 ```
 
 附件：
 
 ```text
-dist/NeonArrowNexus-Python.exe
+NeonArrowNexus-v1.0.4-Windows-x64.zip
 ```
 
 Release 说明草稿：
@@ -102,37 +102,27 @@ GitHub 侧同时提供 `docs/ASSIGNMENT_REQUIREMENTS.md`，把作业要求逐项
 
 ## 3. 发布前还要核对的点
 
-- [x] 最终全量 pytest 通过：`58 passed`，其中 T01–T06 为独立自动测试；
+- [x] 最终全量 pytest 通过：`59 passed`，其中 T01–T06 为独立自动测试，并包含启动 UI 首帧回归；
 - [x] 源码 `--headless-check` 通过；
 - [x] 重新构建 EXE，打包后的 EXE 自检通过；
 - [x] 启动页截图和基础模式截图为本轮新版本；
 - [x] README / BLOG / TEST_REPORT 已统一到“基础单格 + 进阶长箭 + 启动选难度 + 实战 D 切换难度 + 功能图标说明 + 性能优化”的口径；
 - [x] 已扫描最终文本文件，未发现疑似 Token / API Key；临时构建产物仍放在 H: 临时目录，不进入提交；
-- [ ] 用户本人过目并明确同意后，再执行任何远程上传或发布。
+- [x] GitHub 仓库与 Release 已建立；本轮修复继续使用同一仓库，不创建重复仓库。
 
 ## 4. 当前远程状态
 
-- Git 仓库当前没有配置 remote；
-- 本轮没有触发 GitHub 登录、建仓、push 或 Release 上传；
-- 当前最终锁定版已整理为一笔本地 Git 提交，方便本人过目后直接基于该提交创建远程仓库；
-- 因用户要求“先过目、同意后再上传”，本轮不会为解决登录问题而主动触发 GitHub 登录，也不会创建远程仓库；
-- 博客园同样只准备 Markdown 和图片清单，不发布草稿、不改公开文章。
-
-本人确认后才执行的 GitHub 步骤预案：
-
-```text
-gh auth login
-gh repo create neon-arrow-nexus --public --source . --remote origin --push
-gh release create v1.0.0-coursework dist/NeonArrowNexus-Python.exe
-```
-
-以上只是发布步骤记录，**当前没有执行**。
+- GitHub 仓库：`https://github.com/endlessmaybe/neon-arrow-nexus`；
+- `origin/main` 已存在，正式成品使用 GitHub Releases 发布；
+- Release 工作流现已改成：标签触发 → 安装 Python/依赖 → 从标签源码重新构建 EXE → `--headless-check` → 打包 ZIP → 发布 Release；
+- 因此 Release 不再直接复用仓库中可能过期的 `dist/NeonArrowNexus-Python.exe`，避免“博客截图是新 UI、下载成品仍是旧构建”的再次发生；
+- 博客园正文仍由本人确认后发布。
 
 本轮最终 EXE：
 
 ```text
 dist/NeonArrowNexus-Python.exe
-28,258,696 bytes
-SHA-256 AFF0471171E1697155A5FA34EF3CCCB85FBDA5F368E12E9E0CF24427550A68A1
+28,259,189 bytes
+SHA-256 B764DE3CA3CE364F05110AC740D1213AF5B223AA8CA4DD0A400449172BD329AD
 ```
 

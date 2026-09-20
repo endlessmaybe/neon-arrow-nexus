@@ -17,6 +17,7 @@ New-Item -ItemType Directory -Force -Path "dist" | Out-Null
     --clean `
     --onefile `
     --windowed `
+    --manifest "$PSScriptRoot\windows-app.manifest" `
     --name "NeonArrowNexus-Python" `
     --distpath "dist" `
     --workpath "$WorkRoot\build" `
